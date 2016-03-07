@@ -5,13 +5,13 @@ import pygame, sys, random
 from pygame.locals import *
 
 # Defining constants
-POINTSIZE = 4
+POINTSIZE = 10
 WINDOWSWIDTH = 640
-WINDOWSHEIGHT = 480
+WINDOWSHEIGHT = 640
 FPS = 30
 BASICFONTSIZE = 20
 TITLEFONTSIZE = 120
-INITSNAKELEN = 3
+INITSNAKELEN = 4
 BORDERSIZE = WINDOWSHEIGHT / POINTSIZE - POINTSIZE
 
 # RGB
@@ -28,7 +28,7 @@ TITLETEXTCOLOR = RED
 
 
 def main():
-    global BASICFONT, TITLEFONT, MENUSURF, GAMESURF, TOPSCORESURF, INPUTSURF
+    global BASICFONT, TITLEFONT, DISPLAYSURF, MENUSURF, GAMESURF, TOPSCORESURF, INPUTSURF
 
     pygame.init()
     MENUSURF = pygame.display.set_mode((WINDOWSWIDTH, WINDOWSHEIGHT))
@@ -76,7 +76,15 @@ def main():
                 # Clicked on start button.
                 if startRect.collidepoint(event.pos):
                     MENUSURF.blit(GAMESURF, (0, 0))
-                    
+                    wormy, (foodx, foody) = initStateGame()
+
+                    # Draw wormy and food.
+                    for x, y in wormy:
+                        drawPoint(x, y)
+
+                    drawPoint(foodx, foody)
+
+
 
                 # View the top scores.
                 elif topScoreRect.collidepoint(event.pos):
@@ -109,7 +117,7 @@ def checkForQuit():
 
 def drawBorder(message = None):
     pygame.draw.rect(GAMESURF, BLUE, \
-            (POINTSIZE, POINTSIZE, POINTSIZE * BORDERSIZE, POINTSIZE * BORDERSIZE), 1)
+            (POINTSIZE - 1, POINTSIZE - 1, POINTSIZE * BORDERSIZE + 1, POINTSIZE * BORDERSIZE + 1), 1)
     return
 
 def initStateGame():
@@ -117,18 +125,32 @@ def initStateGame():
     # The first point in the list belongs to the snake.
     wormy = []
     for i in range (INITSNAKELEN):
-        wormy.append(((BORDERSIZE + INITSNAKELEN)/ 2 + i), (BORDERSIZE + INITSNAKELEN)/ 2)
+        x, y = getTopLeft((BORDERSIZE + INITSNAKELEN) / 2 + i * POINTSIZE,\
+                (BORDERSIZE + INITSNAKELEN) / 2)
+        wormy.append((x, y))
 
     # Random an init food.
     # Have to consider the border line too.
     # The food cannot be outside the border line.
-    foodx = random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1)
-    foody = random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1)
-    while ((foodx, foody) not in wormy):
-        foodx = random.randint(POINTSIZE + 1, BORDERSIZE * BORDERSIZE - 1) 
-        foody = random.randint(POINTSIZE + 1, BORDERSIZE * BORDERSIZE - 1)
+    foodx, foody = placeRandFood(wormy)
 
     return wormy, (foodx, foody)
+
+def placeRandFood(wormy):
+    foodx, foody = getTopLeft(random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1),\
+            random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1))
+    while ((foodx, foody) in wormy):
+        foodx, foody = getTopLeft(random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1), \
+                random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1))
+    return foodx, foody
+
+def getTopLeft(x, y):
+    return (POINTSIZE * (x / POINTSIZE), POINTSIZE * (y / POINTSIZE))
+
+def drawPoint(x, y):
+    x, y = getTopLeft(x, y)
+    pygame.draw.rect(MENUSURF, POINTCOLOR, (x, y, POINTSIZE, POINTSIZE))
+    return
 
 
 if __name__ == '__main__':
