@@ -70,7 +70,7 @@ def main():
     # Main game components: Wormy, border, system text message, 
     # scores, and food.
     gameObj = []
-    #drawBorder()
+    borderRect = drawBorder()
 
     direction = 0
     gameStart = False
@@ -85,7 +85,7 @@ def main():
                 # Clicked on start button.
                 if startRect.collidepoint(event.pos):
                     MENUSURF.blit(GAMESURF, (0, 0))
-                    wormy, foods = initStateGame()
+                    wormy, foods = initStateGame(borderRect)
 
                     # Draw wormy and food.
                     for x, y in wormy:
@@ -103,18 +103,18 @@ def main():
                     MENUSURF.blit()
                     return
 
-            elif event.type == KEYUP:
-                if event.key in (K_LEFT, K_a):
+            elif event.type == KEYDOWN:
+                if event.key in (K_LEFT, K_a) and direction != RIGHT:
                     direction = LEFT
-                elif event.key in (K_RIGHT, K_d):
+                elif event.key in (K_RIGHT, K_d) and direction != LEFT:
                     direction = RIGHT
-                elif event.key in (K_UP, K_w):
+                elif event.key in (K_UP, K_w) and direction != DOWN:
                     direction = UP
-                elif event.key in (K_DOWN, K_s):
+                elif event.key in (K_DOWN, K_s) and direction != UP:
                     direction = DOWN
 
         if direction and gameStart:
-            moveUpdate(wormy, direction)
+            moveUpdate(wormy, borderRect, direction)
 
         pygame.display.update()
         FPSCLOCK.tick(FPS)
@@ -142,11 +142,13 @@ def checkForQuit():
         pygame.event.post(event)
 
 def drawBorder(message = None):
-    pygame.draw.rect(GAMESURF, BLUE, \
-            (POINTSIZE - 2, POINTSIZE - 2, POINTSIZE * BORDERSIZE + 1, POINTSIZE * BORDERSIZE + 1), 1)
-    return
+    borderRect = pygame.Rect(POINTSIZE + 3, POINTSIZE + 3, POINTSIZE * (BORDERSIZE + 7) + 3, \
+            POINTSIZE * (BORDERSIZE + 1) + 3)
+    pygame.draw.rect(GAMESURF, BLUE, borderRect, 1)
 
-def initStateGame():
+    return borderRect
+
+def initStateGame(borderRect):
     # There should be a list of point that belongs to the snake.
     # The first point in the list belongs to the snake.
     wormy = []
@@ -159,15 +161,16 @@ def initStateGame():
     # Random an init food.
     # Have to consider the border line too.
     # The food cannot be outside the border line.
-    foodx, foody = placeRandFood(wormy)
+    foodx, foody = placeRandFood(wormy, borderRect)
     foods.append((foodx, foody))
 
     return wormy, foods
 
-def placeRandFood(wormy):
+def placeRandFood(wormy, borderRect):
     foodx, foody = getTopLeft(random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1),\
             random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1))
-    while ((foodx, foody) in wormy):
+    while ((foodx, foody) in wormy \
+            or not borderRect.collidepoint((foodx, foody))):
         foodx, foody = getTopLeft(random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1), \
                 random.randint(POINTSIZE + 1, POINTSIZE * BORDERSIZE - 1))
     return foodx, foody
@@ -180,7 +183,7 @@ def drawPoint(x, y):
     pygame.draw.rect(MENUSURF, POINTCOLOR, (x, y, POINTSIZE, POINTSIZE))
     return
 
-def moveUpdate(wormy, direction):
+def moveUpdate(wormy, borderRect, direction):
     # This function does not check valid move.
 
     # Assign to the head first.
@@ -203,8 +206,11 @@ def moveUpdate(wormy, direction):
         wormy[len(wormy) - 1] = getTopLeft(oldhead[0] + POINTSIZE, oldhead[1])
 
     baseSurf = MENUSURF.copy()
+    if not checkValidMove(wormy, borderRect):
+        print 'Game Over'
+        terminate()
 
-    # Draw a blank space over the moving point on thte baseSurf Surface.
+    # Draw a blank space over the moving point on the baseSurf Surface.
     moveLeft, moveTop = getTopLeft(oldTail[0], oldTail[1])
     pygame.draw.rect(baseSurf, BGCOLOR, (moveLeft, moveTop, POINTSIZE, POINTSIZE))
 
@@ -214,6 +220,21 @@ def moveUpdate(wormy, direction):
         drawPoint(wormy[i][0], wormy[i][1])
         pygame.display.update()
         FPSCLOCK.tick(FPS)
+
+def checkValidMove(wormy, borderRect):
+    # The function assumes that wormy has made its invalid move.
+    # If the move is invalid then the game is over.
+    # If the head either hits the border or hit a portion
+    # of its body, the game is over.
+
+    head = wormy[len(wormy) - 1]
+    headtop, headleft = getTopLeft(head[0], head[1])
+    headRect = pygame.Rect(headtop, headleft, POINTSIZE, POINTSIZE)
+    if head in wormy[0:len(wormy) - 1]\
+            or not borderRect.contains(headRect):
+        return False
+    else:
+        return True
 
 if __name__ == '__main__':
     main()
