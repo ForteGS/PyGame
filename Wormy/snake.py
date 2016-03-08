@@ -6,9 +6,9 @@ from pygame.locals import *
 
 # Defining constants
 POINTSIZE = 10
-WINDOWSWIDTH = 640
-WINDOWSHEIGHT = 640
-FPS = 120
+WINDOWSWIDTH = 480
+WINDOWSHEIGHT = 480
+FPS = 30
 BASICFONTSIZE = 20
 TITLEFONTSIZE = 120
 INITSNAKELEN = 4
@@ -232,7 +232,9 @@ def moveUpdate(wormy, borderRect, foodsEaten, foodpos, direction):
         MENUSURF.blit(baseSurf, (0, 0))
         drawPoint(wormy[i][0], wormy[i][1])
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        # Note: the tick(FPS) function below makes the
+        # game runs slower. Why?
+        #FPSCLOCK.tick(FPS)
     return foodpos, foodsEaten
 
 def checkValidMove(wormy, borderRect):
