@@ -8,7 +8,7 @@ from pygame.locals import *
 POINTSIZE = 10
 WINDOWSWIDTH = 640
 WINDOWSHEIGHT = 640
-FPS = 60
+FPS = 120
 BASICFONTSIZE = 20
 TITLEFONTSIZE = 120
 INITSNAKELEN = 4
@@ -67,13 +67,16 @@ def main():
     startSurf, startRect = menuObj[2]
     topScoreSurf, topScoreRect = menuObj[3]
 
-    # Main game components: Wormy, border, system text message, 
+    # Main game components: Wormy, border, system text message,
     # scores, and food.
     gameObj = []
     borderRect = drawBorder()
 
+    # Should these variables be global?
     direction = 0
     gameStart = False
+    foodpos = None
+    foodsEaten = 0
 
     # Draw menu object.
     drawOnSurface(MENUSURF, menuObj)
@@ -93,9 +96,11 @@ def main():
 
                     for foodx, foody in foods:
                         drawPoint(foodx, foody)
+                        foodpos = foodx, foody
 
                     gameStart = True
-
+                    updateScores(foodsEaten, borderRect)
+                    
                     # Detecting input keyboard for changing direction.
 
                 # View the top scores.
@@ -114,7 +119,11 @@ def main():
                     direction = DOWN
 
         if direction and gameStart:
-            moveUpdate(wormy, borderRect, direction)
+            print 'New food at position ({}, {}).'.format(foodpos[0], foodpos[1])
+            print 'Current scores: {}'.format(foodsEaten)
+            foodpos, foodsEaten = moveUpdate(wormy, borderRect, foodsEaten, foodpos, direction)
+            drawPoint(foodpos[0], foodpos[1])
+            updateScores(foodsEaten, borderRect)
 
         pygame.display.update()
         FPSCLOCK.tick(FPS)
@@ -153,6 +162,7 @@ def initStateGame(borderRect):
     # The first point in the list belongs to the snake.
     wormy = []
     foods = []
+
     for i in range (INITSNAKELEN):
         x, y = getTopLeft((BORDERSIZE + INITSNAKELEN) / 2 + i * POINTSIZE,\
                 (BORDERSIZE + INITSNAKELEN) / 2)
@@ -181,9 +191,8 @@ def getTopLeft(x, y):
 def drawPoint(x, y):
     x, y = getTopLeft(x, y)
     pygame.draw.rect(MENUSURF, POINTCOLOR, (x, y, POINTSIZE, POINTSIZE))
-    return
 
-def moveUpdate(wormy, borderRect, direction):
+def moveUpdate(wormy, borderRect, foodsEaten, foodpos, direction):
     # This function does not check valid move.
 
     # Assign to the head first.
@@ -210,6 +219,10 @@ def moveUpdate(wormy, borderRect, direction):
         print 'Game Over'
         terminate()
 
+    if checkFood(wormy, oldTail, foodpos):
+        foodpos = placeRandFood(wormy, borderRect)
+        foodsEaten += 1
+
     # Draw a blank space over the moving point on the baseSurf Surface.
     moveLeft, moveTop = getTopLeft(oldTail[0], oldTail[1])
     pygame.draw.rect(baseSurf, BGCOLOR, (moveLeft, moveTop, POINTSIZE, POINTSIZE))
@@ -220,11 +233,12 @@ def moveUpdate(wormy, borderRect, direction):
         drawPoint(wormy[i][0], wormy[i][1])
         pygame.display.update()
         FPSCLOCK.tick(FPS)
+    return foodpos, foodsEaten
 
 def checkValidMove(wormy, borderRect):
     # The function assumes that wormy has made its invalid move.
     # If the move is invalid then the game is over.
-    # If the head either hits the border or hit a portion
+    # If wormy's head either hits the border or hit a portion
     # of its body, the game is over.
 
     head = wormy[len(wormy) - 1]
@@ -235,6 +249,27 @@ def checkValidMove(wormy, borderRect):
         return False
     else:
         return True
+
+def checkFood(wormy, oldTail, foodpos):
+    # The function assumes that wormy has made its move.
+    # The function checks if Wormy has eaten its food after
+    # its movement. If there is food, 'extend' Wormy's length.
+
+    head = wormy[len(wormy) - 1]
+    if getTopLeft(head[0], head[1]) == getTopLeft(foodpos[0], foodpos[1]):
+        wormy.insert(0, oldTail)
+        return True
+    return False
+
+def updateScores(foodsEaten, borderRect):
+    scoreCenter = WINDOWSWIDTH / 8, borderRect.height + (WINDOWSHEIGHT - borderRect.height) / 2
+    baseSurf = MENUSURF.copy()
+    scoreSurf, scoreRect = make_text(BASICFONT, "Score: " + str(foodsEaten), WHITE, scoreCenter)
+
+    # Draw a blank rect into the updating score surface.
+    pygame.draw.rect(baseSurf, BGCOLOR, (scoreRect.left, scoreRect.top, scoreRect.width, scoreRect.height))
+    MENUSURF.blit(baseSurf, (0, 0))
+    MENUSURF.blit(scoreSurf, scoreRect)
 
 if __name__ == '__main__':
     main()
